@@ -140,16 +140,18 @@ class OpusFilter:
         opus_reader.printPairs()
 
     @staticmethod
-    def pair_generator(source_file_name, target_file_name,
-                       src_tokenizer=None, tgt_tokenizer=None):
+    def pair_generator(*filenames, tokenizers=None):
         """Yield and optionally tokenize sentence pairs from given files"""
-        src_tokenize = tokenization.get_tokenize(src_tokenizer)
-        tgt_tokenize = tokenization.get_tokenize(tgt_tokenizer)
-        with file_open(source_file_name) as source_file, \
-                file_open(target_file_name) as target_file:
-            for src_line in source_file:
-                tgt_line = target_file.readline()
-                yield (src_tokenize(src_line.rstrip()), tgt_tokenize(tgt_line.rstrip()))
+        if tokenizers is None:
+            tokenizers = [None] * len(filenames)
+        tokenize_funcs = [tokenization.get_tokenize(tokenizer) for tokenizer in tokenizers]
+        files = [file_open(fname) for fname in filenames]
+        lines = [f.readline() for f in files]
+        while all(lines):
+            yield tuple(tokenize(line.rstrip()) for tokenize, line in zip(tokenize_funcs, lines))
+            lines = [f.readline() for f in files]
+        for fobj in files:
+            fobj.close()
 
     def get_pairs(self, src_filename, tgt_filename):
         """Return a generator for given sentence files"""
@@ -160,6 +162,33 @@ class OpusFilter:
         return self.pair_generator(source_file_name, target_file_name)
 
     def filter_data(self, parameters, overwrite=False):
+        """Write sentences to file if they pass given filters"""
+        outfiles = [os.path.join(self.output_dir, fname) for fname in parameters['outputs']]
+        infiles = [os.path.join(self.output_dir, fname) for fname in parameters['inputs']]
+        if len(outfiles) != len(infiles):
+            raise ConfigurationError("Number of input and output files should match in sort")
+        if not overwrite and all(os.path.isfile(outfile) for outfile in outfiles):
+            logger.info("Output files exists, skipping step")
+            return
+        filter_pipe = pipeline.FilterPipeline.from_config(parameters['filters'])
+        filterfalse = parameters.get('filterfalse', False)
+        pairs_gen = self.pair_generator(*infiles)
+        if filterfalse:
+            pairs = filter_pipe.filterfalse(pairs_gen)
+        else:
+            pairs = filter_pipe.filter(pairs_gen)
+        limit = parameters.get('limit')
+        outfileobjs = [file_open(fname, 'w') for fname in outfiles]
+        for idx, pair in tqdm(enumerate(pairs)):
+            for item, fobj in zip(pair, outfileobjs):
+                fobj.write(item+'\n')
+                fobj.flush()
+            if limit and idx >= limit - 1:
+                break
+        for fobj in outfileobjs:
+            fobj.close()
+
+    def _filter_data(self, parameters, overwrite=False):
         """Write sentences to file if they pass given filters"""
         src_out = os.path.join(self.output_dir, parameters['src_output'])
         tgt_out = os.path.join(self.output_dir, parameters['tgt_output'])
@@ -293,8 +322,8 @@ class OpusFilter:
         pair_gen = tqdm(self.pair_generator(
             os.path.join(self.output_dir, parameters['src_data']),
             os.path.join(self.output_dir, parameters['tgt_data']),
-            src_tokenizer=parameters['parameters'].get('src_tokenizer', None),
-            tgt_tokenizer=parameters['parameters'].get('tgt_tokenizer', None)))
+            tokenizers=[parameters['parameters'].get('src_tokenizer', None),
+                        parameters['parameters'].get('tgt_tokenizer', None)]))
         word_alignment.make_priors(
             pair_gen, model_out, model=parameters['parameters'].get('model', 3))
 

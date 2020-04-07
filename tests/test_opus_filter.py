@@ -26,10 +26,9 @@ class TestOpusFilter(unittest.TestCase):
                         'src_output': 'RF1_sents.en',
                         'tgt_output': 'RF1_sents.sv'}},
                 {'type': 'filter',
-                    'parameters': {'src_input': 'RF1_sents.en',
-                        'tgt_input': 'RF1_sents.sv',
-                        'src_output': 'RF1_filtered.en',
-                        'tgt_output': 'RF1_filtered.sv',
+                    'parameters': {
+                        'inputs': ['RF1_sents.en', 'RF1_sents.sv'],
+                        'outputs': ['RF1_filtered.en', 'RF1_filtered.sv'],
                         'filters': [{'LanguageIDFilter':
                             {'languages': ['en', 'sv'],
                                 'thresholds': [0, 0]}},
@@ -126,7 +125,7 @@ class TestOpusFilter(unittest.TestCase):
             self.assertAlmostEqual(
                 score['CrossEntropyFilter'][1], 7.569084909162213)
             self.assertEqual(score['TerminalPunctuationFilter'], -0.0)
-            self.assertEqual(score['NonZeroNumeralsFilter'], 0.0)
+            self.assertEqual(score['NonZeroNumeralsFilter'], [0.0])
             self.assertEqual(type(score['WordAlignFilter']), dict)
 
     def test_initial_files(self):
