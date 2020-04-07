@@ -326,20 +326,13 @@ class OpusFilter:
                 f[filter_name]['priors'] = os.path.join(
                     self.output_dir, f[filter_name]['priors'])
             if filter_name == 'CrossEntropyFilter':
-                src_lm_params = f[filter_name]['src_lm_params']
-                src_lm_params['filename'] = os.path.join(
-                    self.output_dir, src_lm_params['filename'])
-                if src_lm_params.get('interpolate'):
-                    for idx in range(len(src_lm_params['interpolate'])):
-                        src_lm_params['interpolate'][idx][0] = os.path.join(
-                            self.output_dir, src_lm_params['interpolate'][idx][0])
-                tgt_lm_params = f[filter_name]['tgt_lm_params']
-                tgt_lm_params['filename'] = os.path.join(
-                    self.output_dir, tgt_lm_params['filename'])
-                if tgt_lm_params.get('interpolate'):
-                    for idx in range(len(tgt_lm_params['interpolate'])):
-                        tgt_lm_params['interpolate'][idx][0] = os.path.join(
-                            self.output_dir, tgt_lm_params['interpolate'][idx][0])
+                for lm_params in f[filter_name]['lm_params']:
+                    lm_params['filename'] = os.path.join(
+                        self.output_dir, lm_params['filename'])
+                if lm_params.get('interpolate'):
+                    for idx in range(len(lm_params['interpolate'])):
+                        lm_params['interpolate'][idx][0] = os.path.join(
+                            self.output_dir, lm_params['interpolate'][idx][0])
 
         pairs_gen = self.get_pairs(parameters['src_input'], parameters['tgt_input'])
         filter_pipe = pipeline.FilterPipeline.from_config(filter_params)
