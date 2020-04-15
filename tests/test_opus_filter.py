@@ -52,8 +52,8 @@ class TestOpusFilter(unittest.TestCase):
                         'parameters': {'tokenizer': 'none', 'model': 3},
                         'output': 'RF1_align.priors'}},
                 {'type': 'score',
-                    'parameters': {'src_input': 'RF1_sents.en',
-                        'tgt_input': 'RF1_sents.sv',
+                    'parameters': {
+                        'inputs': ['RF1_sents.en', 'RF1_sents.sv'],
                         'output': 'RF1_scores.en-sv.jsonl',
                         'filters': [{'LanguageIDFilter':
                             {'languages': ['en', 'sv'],
